@@ -1,49 +1,73 @@
 package com.library.model;
 
+import com.library.exception.InvalidDataException;
+import com.library.exception.LoanAlreadyReturnedException;
+
 import java.time.LocalDate;
 
-public class Loan {
-    private Book book;
-    private User user;
-    private LocalDate startDate;
-    private LocalDate endDate;
+public class Loan implements Identifiable<Long> {
+    private final Long id;
+    private final Book book;
+    private final User user;
+    private final LocalDate startDate;
+    private final LocalDate endDate;
+    private LocalDate returnDate;
+    private LoanStatus status;
 
-    public Loan(Book book, User user, LocalDate startDate, LocalDate endDate) {
-        this.book = book;
-        this.user = user;
-        this.startDate = startDate;
-        this.endDate = endDate;
+    public Loan(Long id, Book book, User user, LocalDate startDate, LocalDate endDate) {
+        this.id = Validations.requireNotNull(id, "id");
+        this.book = Validations.requireNotNull(book, "book");
+        this.user = Validations.requireNotNull(user, "user");
+        this.startDate = Validations.requireNotNull(startDate, "startDate");
+        this.endDate = Validations.requireNotNull(endDate, "endDate");
+        if (!endDate.isAfter(startDate)) {
+            throw new InvalidDataException("La fecha de devolución debe ser posterior a la fecha de inicio");
+        }
+        this.status = LoanStatus.ACTIVE;
+    }
+
+    @Override
+    public Long getId() {
+        return id;
     }
 
     public Book getBook() {
         return book;
     }
 
-    public void setBook(Book book) {
-        this.book = book;
-    }
-
     public User getUser() {
         return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
     }
 
     public LocalDate getStartDate() {
         return startDate;
     }
 
-    public void setStartDate(LocalDate startDate) {
-        this.startDate = startDate;
-    }
-
     public LocalDate getEndDate() {
         return endDate;
     }
 
-    public void setEndDate(LocalDate endDate) {
-        this.endDate = endDate;
+    public LocalDate getReturnDate() {
+        return returnDate;
+    }
+
+    public LoanStatus getStatus() {
+        return status;
+    }
+
+    public boolean isActive() {
+        return status == LoanStatus.ACTIVE;
+    }
+
+    public boolean isOverdue(LocalDate today) {
+        return isActive() && today.isAfter(endDate);
+    }
+
+    public void markAsReturned(LocalDate date) {
+        if (!isActive()) {
+            throw new LoanAlreadyReturnedException(id);
+        }
+        this.returnDate = Validations.requireNotNull(date, "returnDate");
+        this.status = LoanStatus.RETURNED;
     }
 }
