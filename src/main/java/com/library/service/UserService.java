@@ -1,34 +1,38 @@
 package com.library.service;
 
+import com.library.exception.DuplicateResourceException;
+import com.library.exception.UserNotFoundException;
 import com.library.model.User;
+import com.library.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class UserService {
-    private List<User> users = new ArrayList<>();
+    private final UserRepository userRepository;
 
-    public List<User> getAllUsers() {
-        return users;
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    public void addUser(User user) {
-        users.add(user);
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public User addUser(User user) {
+        if (userRepository.existsById(user.getId())) {
+            throw new DuplicateResourceException("usuario", user.getId());
+        }
+        return userRepository.save(user);
     }
 
     public User getUserByEmail(String email) {
-        for (User user : users) {
-            if (user.getEmail().equals(email)) {
-                return user;
-            }
-        }
-        return null;
+        return userRepository.findById(email)
+                .orElseThrow(() -> new UserNotFoundException(email));
     }
 
     public boolean isUserUnderLoanLimit(String email) {
-        User user = getUserByEmail(email);
-        return user!= null && user.getCurrentLoans() < user.getLoanLimit();
+        return getUserByEmail(email).canBorrow();
     }
 }
